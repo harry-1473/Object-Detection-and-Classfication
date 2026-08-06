@@ -1,0 +1,85 @@
+#include <Servo.h>
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27, 20, 4);
+
+Servo servo1, servo2;    
+String data = "";
+String lastType = "";
+bool waitingPrinted = false; // flag to track if "Waiting..." is already displayed
+
+void setup() {
+  Serial.begin(9600);
+
+  lcd.init();
+  lcd.backlight();
+  
+  servo1.attach(9);
+  servo1.write(90); // start position 90 , rotate to 0
+  servo2.attach(8);
+  servo2.write(90);  // start position 0 , rotate to 50 and 140
+
+  lcd.setCursor(0,0);
+  lcd.print("Waiting for input...");
+  waitingPrinted = true;
+}
+
+void loop() {
+  if (Serial.available() > 0) {
+    data = Serial.readStringUntil('\n');
+    data.trim();
+  
+
+    Serial.print("Received: ");
+    Serial.println(data);
+
+    int Angle = 0;
+
+    // Clear previous line
+    lcd.setCursor(0,0);
+    lcd.print("                    "); // 20 spaces
+    lcd.setCursor(0,0);
+
+    if (data == "plastic") {
+        Angle = 50;
+        lcd.print("Plastic * 75 kyats");
+    } 
+    else if (data == "glass") {
+        Angle = 90;
+        lcd.print("Glass * 100 kyats");
+    } 
+    else if (data == "paper") {
+        Angle = 140;
+        lcd.print("Metal * 125 kyats");
+    } 
+    else {
+        lcd.print("Unknown");
+        return;
+    }
+
+    // Move main servo only if type changed
+    if (lastType != data) {
+        servo2.write(Angle);   
+        delay(3000);                  
+    } else {
+        Serial.println("Same type as last, main servo stays.");
+    }
+
+    lastType = data;  
+
+    // Move secondary servo
+    
+        
+    servo1.write(0);
+    delay(2000);
+    servo1.write(90);
+
+    waitingPrinted = false; // reset flag because we received data
+  } 
+  else if (!waitingPrinted) {
+    // No data received, print waiting message
+    lcd.setCursor(0,0);
+    lcd.print("Waiting for input...");
+    waitingPrinted = true;
+  }
+}
